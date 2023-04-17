@@ -45,24 +45,9 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let replacement_html = read_to_string(path_value.replace("./", "frontend/src/")).unwrap();
 
         // Replace the contents of the element with the contents of the replacement HTML file
-        // let x = path_elements.html().as_str();
-        let new_elements = path_elements.html().as_str().replace(path_value, replacement_html.as_str());
-        println!("Test {:#?}", new_elements);
+        let new_elements = original_html.as_str().replace(path_elements.html().as_str(), replacement_html.as_str());
+        println!("Test {:?}", new_elements);
     }
-
-    // Print the path attribute value of each matching element
-    // for path_element in path_elements {
-    //     println!("Found element: {:#?}", path_element);
-    //     if let Some(path_value) = path_element.attr("path") {
-    //         println!("Found element with path attribute: {}", path_value);
-    //         let replacement_html = fs::read_to_string(path_value).unwrap();
-
-    //         let document = Document::from(file_content.as_str());
-
-    //         // Replace the contents of the element with the contents of the replacement HTML file
-    //         path_elements.replace_with(replacement_html.as_str());
-    //     }
-    // }
 
     loop {
         let (stream, _) = listener.accept().await?;
