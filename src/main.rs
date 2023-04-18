@@ -47,7 +47,8 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
         // Replace the contents of the element with the contents of the replacement HTML file
         let new_elements = original_html.as_str().replace(path_elements.html().as_str(), replacement_html.as_str());
-        println!("Test {:?}", new_elements);
+
+        // Create a new merged file in the out folder
         let mut file = std::fs::File::create("./out/index.html").expect("create failed");
         file.write_all(new_elements.as_bytes()).expect("write failed");
         println!("data written to file" );
