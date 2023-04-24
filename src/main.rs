@@ -15,44 +15,43 @@ use hyper::{Method, Request, Response, Result, StatusCode};
 use select::document::Document;
 use select::predicate::{Attr};
 
-static INDEX: &str = "frontend/src/index.html";
-static NOT_FOUND: &[u8] = b"Not Found";
+use notify::{Watcher, RecursiveMode, watcher};
+use std::sync::mpsc::channel;
+use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Create a channel to receive the events.
+    let (sender, receiver) = channel();
+
+    // Create a watcher object, delivering debounced events.
+    // The notification back-end is selected based on the platform.
+    let mut watcher = watcher(sender, Duration::from_secs(10)).unwrap();
+
+    // Add a path to be watched. All files and directories at that path and
+    // below will be monitored for changes.
+    watcher.watch("frontend/src/index.html", RecursiveMode::Recursive).unwrap();
+
+    // server().await?;
+
+    loop {
+        match receiver.recv() {
+            Ok(event) => {
+                println!("File Name: {:?}", event);
+                server().await?;
+            },
+            Err(e) => println!("watch error: {:?}", e),
+        }
+    }
+}
+
+async fn server() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let addr: SocketAddr = "127.0.0.1:3000".parse().unwrap();
 
     let listener = TcpListener::bind(addr).await?;
     println!("Listening on http://{}", addr);
 
-    // Read the HTML file from disk
-    let original_html = read_to_string(INDEX).unwrap();
-
-    // Parse the HTML document
-    let document = Document::from(original_html.as_str());
-
-    // Find all elements with an attribute called "path"
-    let path_elements = document.find(Attr("path", ())).next().unwrap();
-    println!("First: {}", path_elements.html().as_str());
-
-    println!("Found element with path attribute: {:#?}", path_elements);
-
-    let path = path_elements.attr("path");
-    println!("Path {:#?}", path);
-    // let Some(path_value) = path;
-
-    if let Some(path_value) = path {
-        println!("Path Value {:#?}", path_value);
-        let replacement_html = read_to_string(path_value.replace("./", "frontend/src/")).unwrap();
-
-        // Replace the contents of the element with the contents of the replacement HTML file
-        let new_elements = original_html.as_str().replace(path_elements.html().as_str(), replacement_html.as_str());
-
-        // Create a new merged file in the out folder
-        let mut file = std::fs::File::create("./out/index.html").expect("create failed");
-        file.write_all(new_elements.as_bytes()).expect("write failed");
-        println!("data written to file" );
-    }
+    replace_html().await;
 
     loop {
         let (stream, _) = listener.accept().await?;
@@ -66,6 +65,38 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             }
         });
     }
+}
+
+static INDEX: &str = "frontend/src/index.html";
+static NOT_FOUND: &[u8] = b"Not Found";
+
+async fn replace_html() {
+    // Read the HTML file from disk
+    let original_html = read_to_string(INDEX).unwrap();
+
+    // Parse the HTML document
+    let document = Document::from(original_html.as_str());
+
+    let mut x = String::from("");
+    for path_element in document.find(Attr("path", ())) {
+        let path = path_element.attr("path").unwrap();
+        println!("Path {:#?}", path);
+
+        let replacement_html = read_to_string(path.replace("./", "frontend/src/")).unwrap();
+
+        if x == "" {
+            // Replace the contents of the element with the contents of the replacement HTML file
+            let new_elements = original_html.as_str().replace(path_element.html().as_str(), replacement_html.as_str());
+            x = new_elements;
+        } else {
+            let new_elements = x.replace(path_element.html().as_str(), replacement_html.as_str());
+            x = new_elements;
+        }
+    }
+    // Create a new merged file in the out folder
+    let mut file = std::fs::File::create("./out/index.html").expect("create failed");
+    file.write_all(x.as_bytes()).expect("write failed");
+    println!("data written to file" );
 }
 
 async fn response_examples(req: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>> {
