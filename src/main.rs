@@ -1,5 +1,3 @@
-#![deny(warnings)]
-
 use std::net::SocketAddr;
 use std::fs::read_to_string;
 use std::io::Write;
@@ -15,37 +13,11 @@ use hyper::{Method, Request, Response, Result, StatusCode};
 use select::document::Document;
 use select::predicate::{Attr};
 
-use notify::{Watcher, RecursiveMode, watcher};
-use std::sync::mpsc::channel;
-use std::time::Duration;
+// run
+// cargo watch -x run -w frontend/src/ -s "./start_server.sh"
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    // Create a channel to receive the events.
-    let (sender, receiver) = channel();
-
-    // Create a watcher object, delivering debounced events.
-    // The notification back-end is selected based on the platform.
-    let mut watcher = watcher(sender, Duration::from_secs(10)).unwrap();
-
-    // Add a path to be watched. All files and directories at that path and
-    // below will be monitored for changes.
-    watcher.watch("frontend/src/index.html", RecursiveMode::Recursive).unwrap();
-
-    // server().await?;
-
-    loop {
-        match receiver.recv() {
-            Ok(event) => {
-                println!("File Name: {:?}", event);
-                server().await?;
-            },
-            Err(e) => println!("watch error: {:?}", e),
-        }
-    }
-}
-
-async fn server() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let addr: SocketAddr = "127.0.0.1:3000".parse().unwrap();
 
     let listener = TcpListener::bind(addr).await?;
@@ -101,7 +73,7 @@ async fn replace_html() {
 
 async fn response_examples(req: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>> {
     match (req.method(), req.uri().path()) {
-        (&Method::GET, "/") | (&Method::GET, "/index.html") => simple_file_send(INDEX).await,
+        (&Method::GET, "/") | (&Method::GET, "/index.html") => simple_file_send("out/index.html").await,
         (&Method::GET, "/no_file.html") => {
             // Test what happens when file cannot be be found
             simple_file_send("this_file_should_not_exist.html").await
