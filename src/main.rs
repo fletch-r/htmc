@@ -16,8 +16,6 @@ use select::predicate::{Attr};
 // run
 // cargo watch -x run -w frontend/src/ -s "./start_server.sh"
 
-// Test message
-
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let addr: SocketAddr = "127.0.0.1:3000".parse().unwrap();
